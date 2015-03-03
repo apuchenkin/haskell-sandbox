@@ -6,4 +6,5 @@
 
 / HomeR GET POST
 
-/car CarR GET POST
+/car            CarsR    GET POST
+/car/#CarId     CarR    GET

@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Handler.Car where
 
 import Import
@@ -20,13 +19,18 @@ carAForm = Car
     <$> ireq textField "model"
     <*> ireq intField "year"
 
-getCarR :: Handler Value
-getCarR = do
+getCarsR :: Handler Value
+getCarsR = do
     cars <- runDB $ selectList [] [] :: Handler [Entity Car]
     returnJson $ cars
 
-postCarR :: Handler Value
-postCarR = do
+postCarsR :: Handler Value
+postCarsR = do
     car <- runInputPost carAForm
     runDB $ insert car
     returnJson car
+
+getCarR :: CarId -> Handler Value
+getCarR carId = do
+    car <- runDB $ get carId
+    returnJson $ car
