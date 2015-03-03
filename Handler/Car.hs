@@ -9,11 +9,10 @@ instance ToJSON Car where
         , "year"  .= carYear
         ]
 
-instance ToJSON (Entity Car) where
-    toJSON c = object
-        [ "id"    .= entityKey $ c
-        , "model" .= carModel c
-        , "year"  .= carYear c
+instance ToJSON a => ToJSON (Entity a) where
+    toJSON (Entity k a) = object
+        [ "id"   .= k
+        , "data" .= toJSON a
         ]
 
 carAForm :: FormInput Handler Car
@@ -24,7 +23,7 @@ carAForm = Car
 getCarR :: Handler Value
 getCarR = do
     cars <- runDB $ selectList [] [] :: Handler [Entity Car]
-    returnJson $ entityVal <$> cars
+    returnJson $ cars
 
 postCarR :: Handler Value
 postCarR = do
