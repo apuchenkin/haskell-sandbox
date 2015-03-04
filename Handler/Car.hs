@@ -84,3 +84,8 @@ getCarR :: CarId -> Handler Value
 getCarR carId = do
     car <- runDB $ get carId
     returnJson car
+
+patchCarR :: CarId -> Handler Value
+patchCarR carId = do
+    car <- runInputPost carAForm
+    returnJson car
