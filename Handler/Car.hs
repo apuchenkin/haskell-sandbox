@@ -65,3 +65,8 @@ patchCarR carId = do
     runDB $ update carId (toAssignment carData)
     car <- runDB $ get carId
     returnJson car
+
+deleteCarR :: CarId -> Handler Value
+deleteCarR carId = do
+    runDB $ delete carId
+    returnJson ()

@@ -7,4 +7,4 @@
 / HomeR GET POST
 
 /car            CarsR    GET POST
-/car/#CarId     CarR     GET PATCH
+/car/#CarId     CarR     GET PATCH DELETE
