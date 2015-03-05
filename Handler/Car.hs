@@ -5,80 +5,54 @@ module Handler.Car where
 import Import
 import Data.Aeson
 
-instance ToJSON Car where
-    toJSON Car {..} = object
-        [ "model" .= carModel
-        , "year"  .= carYear
-        ]
-
-instance ToJSON a => ToJSON (Entity a) where
-    toJSON (Entity k a) = object
-        [ "id"   .= k
-        , "data" .= toJSON a
-        ]
-
-instance FromJSON Car where
-    parseJSON (Object v) = Car
-        <$> v .:? "model"
-        <*> v .:? "year"
-    -- A non-Object value is of the wrong type, so fail.
-    parseJSON _          = mzero
-
 carAForm :: FormInput Handler Car
 carAForm = Car
     <$> iopt textField "model"
     <*> iopt intField "year"
 
+-------------------------------------------------------------------
+data SomeEF e   = forall typ . PersistField typ => SomeEF { unSomeEF :: EntityField e (Maybe typ), unSomeEV :: (Maybe typ)}
+
+getEntityFields :: Car -> [SomeEF Car]
+getEntityFields Car {..} = [SomeEF CarModel carModel, SomeEF CarYear carYear]
+
+toFilter :: Car -> [Filter Car]
+toFilter car = map buildFilter $ filter notNull $ getEntityFields car where
+    notNull :: SomeEF Car -> Bool
+    notNull (SomeEF {unSomeEV = v}) = case v of {Nothing -> False; Just _ -> True}
+    buildFilter :: SomeEF Car -> Filter Car
+    buildFilter (SomeEF {unSomeEF = f, unSomeEV = v}) = f  ==. v
+
+toAssignment :: Car -> [Update Car]
+toAssignment car = map buildFilter $ filter notNull $ getEntityFields car where
+    notNull :: SomeEF Car -> Bool
+    notNull (SomeEF {unSomeEV = v}) = case v of {Nothing -> False; Just _ -> True}
+    buildFilter :: SomeEF Car -> Update Car
+    buildFilter (SomeEF {unSomeEF = f, unSomeEV = v}) = f  =. v
+
+--------------------------------------------------------------
+
 getCarsR :: Handler Value
 getCarsR = do
     qs <- lookupGetParam "filter"
-    let filter = join $ decodeStrict <$> (encodeUtf8 <$> qs) :: Maybe Car
-    cars <- runDB $ selectList (toFilter filter) [] :: Handler [Entity Car]
+    let carFilter = join $ decodeStrict <$> (encodeUtf8 <$> qs) :: Maybe Car
+    cars <- runDB $ selectList (maybeFilter carFilter) [] :: Handler [Entity Car]
     returnJson $ cars
     where
-        toFilter :: Maybe Car -> [Filter Car]
-        toFilter car = case car of
-            Nothing            -> []
-            Just Car {..}      ->
-                [] ++ (
-                    case carModel of
-                        Just value -> [CarModel ==. Just value]
-                        Nothing -> []
-                ) ++ (
-                    case carYear  of
-                        Just value -> [CarYear  ==. Just value]
-                        Nothing -> []
-                )
+        maybeFilter :: Maybe Car -> [Filter Car]
+        maybeFilter car = case car of
+            Nothing  -> []
+            Just c   -> toFilter c
 
-
---
---                filter notNull [
---                    CarModel ==. carModel,
---                    CarYear ==. carYear
---                ]
---
---        notNull :: Filter Car -> Bool
---        notNull Filter {} = False
---        notNull Filter {filterValue = typ} = case typ of
---            Right _ -> False
---            Left v -> case v of
---                Just v -> True
---                Nothing -> False
-
---
---        mapFilter :: PersistField v => (EntityField Car (Maybe v), Maybe v) -> Filter Car
---        mapFilter (field, value) = field ==. value
---
---        notNull :: PersistField v => (EntityField Car (Maybe v), Maybe v) -> Bool
---        notNull (_, value) = case value of
---            Just value -> True
---            Nothing -> False
 
 postCarsR :: Handler Value
 postCarsR = do
-    car <- runInputPost carAForm
-    runDB $ insert car
+    carData <- runInputPost carAForm
+    carId <- runDB $ insert carData
+    car <- runDB $ get carId
     returnJson car
+
+----------------------------------------------------------------
 
 getCarR :: CarId -> Handler Value
 getCarR carId = do
@@ -87,5 +61,7 @@ getCarR carId = do
 
 patchCarR :: CarId -> Handler Value
 patchCarR carId = do
-    car <- runInputPost carAForm
+    carData <- runInputPost carAForm
+    runDB $ update carId (toAssignment carData)
+    car <- runDB $ get carId
     returnJson car

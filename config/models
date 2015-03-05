@@ -8,7 +8,7 @@ Email
     user UserId Maybe
     verkey Text Maybe
     UniqueEmail email
-Car
+Car json
     model Text Maybe
     year Int Maybe
     deriving Show
