@@ -55,6 +55,7 @@ toSomeEF = do
 getCarsR :: Handler Value
 getCarsR = do
     qs <- lookupGetParam "filter"
+--    msort <- runInputGet $ iopt textField "sort" -- todo: add sorting
     let carFilter = join $ decodeStrict <$> (encodeUtf8 <$> qs) :: Maybe Car
     cars <- runDB $ selectList (maybeFilter carFilter) [] :: Handler [Entity Car]
     returnJson $ cars
