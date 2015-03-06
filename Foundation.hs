@@ -43,11 +43,8 @@ instance Yesod App where
     -- see: https://github.com/yesodweb/yesod/wiki/Overriding-approot
     approot = ApprootMaster $ appRoot . appSettings
 
-    -- Store session data on the client in encrypted cookies,
-    -- default session idle timeout is 120 minutes
-    makeSessionBackend _ = fmap Just $ defaultClientSessionBackend
-        120    -- timeout in minutes
-        "config/client_session_key.aes"
+    -- Sessions is disabled
+    makeSessionBackend _ = return Nothing
 
     defaultLayout widget = do
         master <- getYesod
