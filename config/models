@@ -3,11 +3,13 @@ User
     password Text Maybe
     UniqueUser ident
     deriving Typeable
+
 Email
     email Text
     user UserId Maybe
     verkey Text Maybe
     UniqueEmail email
+
 Car json
     model Text Maybe
     year Int Maybe

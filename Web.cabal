@@ -82,6 +82,7 @@ library
                  , containers
                  , vector
                  , time
+                 , mtl
 
 executable         Web
     if flag(library-only)

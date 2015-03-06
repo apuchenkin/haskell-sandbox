@@ -4,6 +4,7 @@ module Handler.Car where
 
 import Import
 import Data.Aeson
+import Control.Monad.Reader
 
 carAForm :: FormInput Handler Car
 carAForm = Car
@@ -11,24 +12,43 @@ carAForm = Car
     <*> iopt intField "year"
 
 -------------------------------------------------------------------
-data SomeEF e   = forall typ . PersistField typ => SomeEF { unSomeEF :: EntityField e (Maybe typ), unSomeEV :: (Maybe typ)}
+--data SomeEF e   = forall typ . PersistField typ => SomeEF { unSomeEF :: EntityField e (Maybe typ), unSomeEV :: (Maybe typ)}
+data SomeEF e   = forall typ. PersistField typ => SomeEF { unSomeEF :: EntityField e typ, unSomeEV :: typ}
 
-getEntityFields :: Car -> [SomeEF Car]
-getEntityFields Car {..} = [SomeEF CarModel carModel, SomeEF CarYear carYear]
+--getEntityFields :: Car -> [SomeEF Car]
+--getEntityFields Car {..} = [SomeEF CarModel carModel, SomeEF CarYear carYear]
 
 toFilter :: Car -> [Filter Car]
-toFilter car = map buildFilter $ filter notNull $ getEntityFields car where
-    notNull :: SomeEF Car -> Bool
-    notNull (SomeEF {unSomeEV = v}) = case v of {Nothing -> False; Just _ -> True}
+toFilter car = map buildFilter $ runReader toSomeEF car where
     buildFilter :: SomeEF Car -> Filter Car
     buildFilter (SomeEF {unSomeEF = f, unSomeEV = v}) = f  ==. v
 
 toAssignment :: Car -> [Update Car]
-toAssignment car = map buildFilter $ filter notNull $ getEntityFields car where
-    notNull :: SomeEF Car -> Bool
-    notNull (SomeEF {unSomeEV = v}) = case v of {Nothing -> False; Just _ -> True}
+toAssignment car = map buildFilter $ runReader toSomeEF car where
     buildFilter :: SomeEF Car -> Update Car
     buildFilter (SomeEF {unSomeEF = f, unSomeEV = v}) = f  =. v
+
+toSomeEF :: Reader Car [SomeEF Car]
+toSomeEF = do
+    Just model <- asks carModel
+    Just year  <- asks carYear
+    return [SomeEF CarModel (Just model), SomeEF CarYear (Just year)]
+
+--instance ToJSON SomeEV where
+--    toJSON SomeEV {..} = toJSON unSomeEF
+--
+--cu :: Reader User [SomeEV]
+--cu = do
+--    a <- asks userIdent
+--    b <- asks userPassword
+--    return [SomeEV a, SomeEV b]
+--
+--
+--postUserR :: Handler Value
+--postUserR = do
+--    let user = User {userIdent = "sup", userPassword = Nothing}
+--    let vals = runReader cu user
+--    returnJson $ vals
 
 --------------------------------------------------------------
 
