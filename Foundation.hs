@@ -1,12 +1,16 @@
 module Foundation where
 
 import Import.NoFoundation
-import Database.Persist.Sql (ConnectionPool, runSqlPool)
-import Text.Hamlet          (hamletFile)
-import Text.Jasmine         (minifym)
-import Yesod.Auth.Dummy     (authDummy)
-import Yesod.Default.Util   (addStaticContentExternal)
-import Yesod.Core.Types     (Logger)
+import Database.Persist.Sql     (ConnectionPool, runSqlPool)
+import Text.Hamlet              (hamletFile)
+import Text.Jasmine             (minifym)
+import Yesod.Auth.Http.Basic
+import Yesod.Default.Util       (addStaticContentExternal)
+import Yesod.Core.Types         (Logger)
+import Data.ByteString.Base64   (decodeLenient)
+import Data.Word8               (_space, _colon)
+import qualified Data.ByteString as B
+import qualified Network.Wai.Internal  as W (requestHeaders)
 import qualified Yesod.Core.Unsafe as Unsafe
 
 -- | The foundation datatype for your application. This can be a good place to
@@ -76,6 +80,11 @@ instance Yesod App where
             Nothing  -> return AuthenticationRequired
             Just _   -> return Authorized
 
+--    instance Yesod App where
+--      isAuthorized SecureR _   =
+--        maybeAuthId >>= return . maybe AuthenticationRequired (const Authorized)
+--      isAuthorized _ _         = Authorized
+
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of
@@ -116,13 +125,14 @@ instance YesodPersistRunner App where
 instance YesodAuth App where
     type AuthId App = UserId
 
-    -- Where to send a user after successful login
-    loginDest _ = HomeR
-    -- Where to send a user after logout
-    logoutDest _ = HomeR
-    -- Override the above two destinations when a Referer: header is present
-    redirectToReferer _ = True
+--    -- Where to send a user after successful login
+--    loginDest _ = HomeR
+--    -- Where to send a user after logout
+--    logoutDest _ = HomeR
+--    -- Override the above two destinations when a Referer: header is present
+--    redirectToReferer _ = True
 
+--    getAuthId = return . Just . credsIdent
     getAuthId creds = runDB $ do
         x <- getBy $ UniqueUser $ credsIdent creds
         case x of
@@ -134,9 +144,24 @@ instance YesodAuth App where
                     }
 
     -- You can add other plugins like BrowserID, email or OAuth here
-    authPlugins _ = [authDummy]
+--    authPlugins _ = [authDummy]
+--    authHttpManager = getHttpManager
 
-    authHttpManager = getHttpManager
+    maybeAuthId = do
+        request <- waiRequest
+        let authorization = lookup "Authorization" (W.requestHeaders request)
+        case authorization of
+            Just header -> do
+                let (_, v) = B.breakByte _space header
+                let (username, password) = B.breakByte _colon $ decodeLenient v
+                case B.uncons password of
+                    Just (_, p) -> checkCreds (decodeUtf8 username) (decodeUtf8 p)
+                    _ -> return Nothing
+            _ -> return Nothing
+        where
+            checkCreds ident password = runDB $ do
+            user <- selectKeysList [UserIdent ==. ident, UserPassword ==. Just password] [LimitTo 1]
+            return $ listToMaybe user
 
 instance YesodAuthPersist App
 
