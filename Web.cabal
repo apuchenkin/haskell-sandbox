@@ -23,6 +23,7 @@ library
                      Handler.Common
                      Handler.Home
                      Handler.Car
+                     Handler.Chat
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
@@ -54,6 +55,8 @@ library
                  , yesod-auth-basic
                  , yesod-static                  >= 1.4.0.3    && < 1.5
                  , yesod-form                    >= 1.4.0      && < 1.5
+                 , yesod-websockets
+                 , websockets
                  , classy-prelude                >= 0.10.2
                  , classy-prelude-conduit        >= 0.10.2
                  , classy-prelude-yesod          >= 0.10.2

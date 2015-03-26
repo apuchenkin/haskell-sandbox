@@ -8,3 +8,4 @@
 
 /car            CarsR    GET POST
 /car/#CarId     CarR     GET PATCH DELETE
+/chat ChatR GET

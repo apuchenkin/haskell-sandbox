@@ -23,6 +23,7 @@ data App = App
     , appConnPool    :: ConnectionPool -- ^ Database connection pool.
     , appHttpManager :: Manager
     , appLogger      :: Logger
+    , appChan        :: TChan Text
     }
 
 instance HasHttpManager App where
@@ -72,6 +73,7 @@ instance Yesod App where
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
+    isAuthorized ChatR _ = return Authorized
 
     -- Default to Authorized for now.
     isAuthorized _ _ = do
@@ -112,6 +114,14 @@ instance Yesod App where
             || level == LevelError
 
     makeLogger = return . appLogger
+
+--    errorHandler NotAuthenticated = selectRep $
+--          provideRep $ do
+--            addHeader "WWW-Authenticate" $ T.concat
+--                  [ "RedirectJSON realm=\"Realm\", param=\"localhost\"" ]
+--            -- send error response here
+--            ...
+--    errorHandler e = defaultErrorHandler e
 
 -- How to run database actions.
 instance YesodPersist App where
